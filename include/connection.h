@@ -15,6 +15,7 @@ public:
 	~Connection();
 
 	QString ip() { return m_ip; }
+	void updatePing(QByteArray const a_rawMessage);
 
 signals:
 	void disconnected();
