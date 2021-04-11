@@ -34,9 +34,7 @@ find_package(Qt5Core REQUIRED)
 find_package(Qt5Test REQUIRED)
 find_package(Qt5Network REQUIRED)
 
-find_package(spdlog)
-find_package(IncludeSpdlog)
-find_package(ConfigReader)
+find_package(Utils)
 
 set(SRC_MAIN src/main.cc)
 set(SRC
@@ -62,10 +60,10 @@ add_library(${PROJECT_NAME} STATIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
-target_link_libraries(${PROJECT_NAME} ConfigReader)
+target_link_libraries(${PROJECT_NAME} Utils)
 target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Network Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME}_app ConfigReader)
+target_link_libraries(${PROJECT_NAME}_app Utils)
 target_link_libraries(${PROJECT_NAME}_app Qt5::Core Qt5::Network Threads::Threads)
   
 if (WIN32)
