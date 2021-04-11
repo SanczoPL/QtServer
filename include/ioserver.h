@@ -5,7 +5,6 @@
 #include <QObject>
 #include <QVector>
 #include "connection.h"
-#include "topicmanager.h"
 #include "configreader.h"
 #include "includespdlog.h"
 
