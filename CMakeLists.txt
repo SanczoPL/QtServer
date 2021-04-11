@@ -37,6 +37,7 @@ find_package(Qt5Core REQUIRED)
 find_package(Qt5Test REQUIRED)
 find_package(Qt5Network REQUIRED)
 
+
 enable_testing()
 
 macro(clone_build libname)
