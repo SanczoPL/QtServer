@@ -54,13 +54,9 @@ clone_build(googletest)
 # Prevent GoogleTest from overriding our compiler/linker options
 # when building with Visual Studio
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-clone_build(spdlog)
-clone_build(IncludeSpdlog)
-clone_build(ConfigReader)
 
-find_package(spdlog)
-find_package(IncludeSpdlog)
-find_package(ConfigReader)
+#add_subdirectory(Utils)
+find_package(Utils)
 
 set(SRC_MAIN src/main.cc)
 set(SRC
@@ -78,10 +74,13 @@ set(HEADERS
 add_library(${PROJECT_NAME} STATIC
 server.json ${SRC} ${HEADERS} )
 
-add_executable(g_test
-server.json gtest/gtest.cc)
-add_executable(q_test 
-server.json qtest/qtest.cc qtest/qtest.h)
+add_executable(g_test 
+server.json 
+gtest/gtest.cc 
+gtest/gtest_ioserver.cc 
+gtest/gtest_ioserver.h)
+
+add_executable(q_test server.json qtest/qtest.cc qtest/qtest.h)
 
 add_executable( 
  ${PROJECT_NAME}_app server.json ${SRC} ${SRC_MAIN} ${HEADERS} )
@@ -91,17 +90,17 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
-target_link_libraries(${PROJECT_NAME} ConfigReader )
+target_link_libraries(${PROJECT_NAME} Utils )
 target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Network Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME}_app ${PROJECT_NAME} ConfigReader)
+target_link_libraries(${PROJECT_NAME}_app ${PROJECT_NAME} Utils)
 target_link_libraries(${PROJECT_NAME}_app Qt5::Core Qt5::Network Threads::Threads)
 
-target_link_libraries(g_test ${PROJECT_NAME} ConfigReader gtest gmock)
+target_link_libraries(g_test ${PROJECT_NAME} Utils gtest gmock)
 target_link_libraries(g_test Qt5::Core Qt5::Network Threads::Threads)
 
-target_link_libraries(q_test ${PROJECT_NAME} ConfigReader)
-target_link_libraries(q_test Qt5::Core Qt5::Network Threads::Threads)
+target_link_libraries(q_test ${PROJECT_NAME} Utils)
+target_link_libraries(q_test Qt5::Test Qt5::Core Qt5::Network Threads::Threads)
 
   
 if (WIN32)
