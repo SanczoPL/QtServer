@@ -14,17 +14,20 @@ set(CMAKE_AUTOMOC ON)
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-configure_file(server.json ${CMAKE_BINARY_DIR}/server.json)
-configure_file(server.json ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/bin/server.json)
-configure_file(server.json ${CMAKE_BINARY_DIR}/bin/server.json)
-configure_file(server.json ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/server.json)
+macro(copy_json jsonname)
+	configure_file(${jsonname} ${CMAKE_BINARY_DIR}/${jsonname})
+	configure_file(${jsonname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/bin/${jsonname})
+	configure_file(${jsonname} ${CMAKE_BINARY_DIR}/bin/${jsonname})
+	configure_file(${jsonname} ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/${jsonname})
+endmacro()
+copy_json("server.json")
+
 
 if (WIN32)
+	set(QT5_PATH  "E:\\Qt\\5.15.2\\msvc2019_64")
 	list(APPEND CMAKE_PREFIX_PATH "E:\\repo\\opencvBuild")
-	list(APPEND CMAKE_PREFIX_PATH "E:\\Qt\\5.12.8\\msvc2017_64")
+	list(APPEND CMAKE_PREFIX_PATH ${QT5_PATH})
 	list(APPEND CMAKE_PREFIX_PATH "E:\\repo\\spdlog\\build\\install")
-	list(APPEND CMAKE_PREFIX_PATH "E:\\repo\\IncludeSpdlog\\build\\install")
-	list(APPEND CMAKE_PREFIX_PATH "E:\\repo\\ConfigReader\\build\\install")
 endif (WIN32)
 
 
@@ -33,6 +36,26 @@ find_package(Threads REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Test REQUIRED)
 find_package(Qt5Network REQUIRED)
+
+enable_testing()
+
+macro(clone_build libname)
+	configure_file(clone_build/${libname}.in ${libname}-download/CMakeLists.txt)
+	execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${libname}-download")
+	execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${libname}-download")
+	add_subdirectory("${CMAKE_BINARY_DIR}/${libname}-src"
+                 "${CMAKE_BINARY_DIR}/${libname}-build")
+endmacro()
+
+clone_build(googletest)
+# Prevent GoogleTest from overriding our compiler/linker options
+# when building with Visual Studio
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+clone_build(spdlog)
+clone_build(IncludeSpdlog)
+clone_build(ConfigReader)
 
 find_package(spdlog)
 find_package(IncludeSpdlog)
@@ -51,22 +74,34 @@ set(HEADERS
   include/message.h
   include/ioserver.h)
 
+add_library(${PROJECT_NAME} STATIC
+server.json ${SRC} ${HEADERS} )
+
+add_executable(g_test
+server.json gtest/gtest.cc)
+add_executable(q_test 
+server.json qtest/qtest.cc qtest/qtest.h)
+
 add_executable( 
  ${PROJECT_NAME}_app server.json ${SRC} ${SRC_MAIN} ${HEADERS} )
- 
-add_library(${PROJECT_NAME} STATIC
- server.json ${SRC} ${HEADERS} )
 
- target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
-target_link_libraries(${PROJECT_NAME} ConfigReader)
+target_link_libraries(${PROJECT_NAME} ConfigReader )
 target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Network Threads::Threads)
 
-target_link_libraries(${PROJECT_NAME}_app ConfigReader)
+target_link_libraries(${PROJECT_NAME}_app ${PROJECT_NAME} ConfigReader)
 target_link_libraries(${PROJECT_NAME}_app Qt5::Core Qt5::Network Threads::Threads)
+
+target_link_libraries(g_test ${PROJECT_NAME} ConfigReader gtest gmock)
+target_link_libraries(g_test Qt5::Core Qt5::Network Threads::Threads)
+
+target_link_libraries(q_test ${PROJECT_NAME} ConfigReader)
+target_link_libraries(q_test Qt5::Core Qt5::Network Threads::Threads)
+
   
 if (WIN32)
     get_target_property(QT5_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
@@ -90,18 +125,17 @@ if (WIN32)
 
 endif(WIN32)
 
-
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "default install path" FORCE )
 endif()
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Config
-    ARCHIVE DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION bin ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
-install(FILES  ${HEADERS} DESTINATION include)
+install(FILES ${HEADERS} DESTINATION include)
 install(EXPORT ${PROJECT_NAME}Config DESTINATION share/${PROJECT_NAME}/cmake)
 
 export(TARGETS ${PROJECT_NAME} FILE ${PROJECT_NAME}Config.cmake)
